@@ -10,14 +10,25 @@
         <div class="logo">
             <h1>SQLGuru</h1>
         </div>
-        <button id="sign-in-button">Войти</button>
+        <button id="open-modal-button" onclick="openModal()">Войти</button>
+        <div id="loginModal">
+            <div class="modalContent">
+                <button id="close-modal-button" onclick="closeModal()">Закрыть</button>
+                <div class="forms">
+                    <input class="forms-element" type="email" placeholder="Email">
+                    <input class="forms-element" type="password" placeholder="Password">
+                    <button class="forms-element" id="sign-in-button">Войти</button>
+                </div>
+            </div>
+        </div>
     </div>
     <div id="banner">
         <h1>Укроти язык программирования SQL с нашим тренажёром SQLGuru!</h1>
-        <button>Начать</button>
+        <button id="beginButton">Начать</button>
     </div>
     <div id="footer">
         <h1></h1>
     </div>
+    <script src="../static/js/script.js"></script>
 </body>
 </html>
