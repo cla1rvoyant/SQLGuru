@@ -73,14 +73,19 @@
     height: 100%;
     top: 0;
     left: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     position: fixed;
-    display: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.2s ease;
     background: rgba(0, 0, 0, 0.5);
 }
 
 .modalContent {
-    width: 300px;
-    height: 150px;
+    width: 500px;
+    height: 200px;
     display: flex;
     justify-content: center;
     position: relative;
@@ -93,14 +98,45 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
 }
 
 .forms-element {
     margin: 5px;
 }
 
+.forms input {
+    width: 200px;
+    height: 20px;
+}
+
 #close-modal-button {
+    width: 80px;
+    height: 25px;
+    border-radius: 15px;
+    background-color: #406882;
+    border: 0;
+    cursor: pointer;
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 15px;
+    right: 20px;
+    transition: 0.2s ease;
+}
+
+#close-modal-button:hover {
+    background-color: #406882cb;
+}
+
+#sign-in-button {
+    width: 100px;
+    height: 30px;
+    border-radius: 20px;
+    border: 0;
+    cursor: pointer;
+    background-color: #B1D0E0;
+    transition: 0.2s ease;
+}
+
+#sign-in-button:hover {
+    background-color: #b1d0e0b7;
 }
