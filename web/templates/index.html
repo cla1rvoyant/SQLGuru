@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="stylesheet" href="../static/css/style.css">
     <meta charset="UTF-8">
     <title>SQLGuru</title>
+    <link rel="stylesheet" href="../static/css/style.css">
 </head>
 <body>
-    <div id="main-navigation-bar">
+    <div id="main-nav-bar">
         <div class="logo">
             <h1>SQLGuru</h1>
         </div>
-        <button id="open-modal-button" onclick="openModal()">Войти</button>
+        <button id="login-button" onclick="openModal('loginModal')">Войти</button>
         <div id="loginModal">
             <div class="modalContent">
-                <button id="close-modal-button" onclick="closeModal()">Закрыть</button>
+                <button class="close-modal-button" onclick="closeModal('loginModal')">Закрыть</button>
                 <div class="forms">
                     <input class="forms-element" type="email" placeholder="Email">
                     <input class="forms-element" type="password" placeholder="Password">
@@ -24,7 +24,16 @@
     </div>
     <div id="banner">
         <h1>Укроти язык программирования SQL с нашим тренажёром SQLGuru!</h1>
-        <button id="beginButton">Начать</button>
+        <button id="beginButton" onclick="openModal('beginModal')">Начать</button>
+        <div id="beginModal">
+            <div class="modalContent">
+                <button class="close-modal-button" onclick="closeModal('beginModal')">Закрыть</button>
+                <div class="forms">
+                    <button class="forms-element" id="guest-button" onclick="document.location='simulator.html'">Продолжить как гость</button>
+                    <button class="forms-element" id="sign-in-button">Войти</button>
+                </div>
+            </div>
+        </div>
     </div>
     <div id="footer">
         <h1></h1>
