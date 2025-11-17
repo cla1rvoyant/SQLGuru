@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Тест</title>
+    <link rel="stylesheet" href="../static/css/style.css">
+</head>
+<body>
+    {{if .Question}}
+    <div class="test">
+        <p>{{.Question.Text}}</p>
+        <form class="ans-form" method="POST" action="/test?topic={{.Topic}}">
+            <input type="hidden" name="question_id" value="{{.Question.ID}}">
+            {{range $index, $answer := .Question.ShuffledAnswers}}
+            <div class="answer">
+                <label for="ans{{$index}}">
+                    <input type="radio" name="answer" id="ans{{$index}}" value="{{$answer}}">
+                    {{$answer}}
+                </label>
+            </div>
+            {{end}}
+            <button type="submit" class="ans-btn">Ответить</button>
+        </form>
+    </div>
+    {{end}}
+</body>
+</html>

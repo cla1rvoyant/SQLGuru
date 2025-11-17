@@ -29,8 +29,8 @@
             <div class="modalContent">
                 <button class="close-modal-button" onclick="closeModal('beginModal')">Закрыть</button>
                 <div class="forms">
-                    <button class="forms-element" id="guest-button" onclick="document.location='simulator.html'">Продолжить как гость</button>
-                    <button class="forms-element" id="sign-in-button">Войти</button>
+                    <button class="forms-element" id="guest-button" onclick="document.location='choise'; closeModal('beginModal')">Продолжить как гость</button>
+                    <button class="forms-element" id="sign-in-button" onclick="openModal('loginModal'); closeModal('beginModal')">Войти</button>
                 </div>
             </div>
         </div>
@@ -38,6 +38,6 @@
     <div id="footer">
         <h1></h1>
     </div>
-    <script src="../static/js/script.js"></script>
+    <script src="static/js/script.js"></script>
 </body>
 </html>
