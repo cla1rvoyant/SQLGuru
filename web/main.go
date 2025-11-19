@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 
 	_ "github.com/lib/pq"
 )
@@ -23,24 +22,24 @@ type Question struct {
 	ShuffledAnswers []string
 }
 
-func getNextTestID(r *http.Request) string {
-	maxID := 0
-	for _, cookie := range r.Cookies() {
-		if strings.HasPrefix(cookie.Name, "test_") {
-			parts := strings.Split(cookie.Name, "_")
-			if len(parts) == 2 {
-				id, err := strconv.Atoi(parts[1])
-				if err == nil {
-					if id > maxID {
-						maxID = id
-					}
-				}
-			}
-		}
-	}
+// func getNextTestID(r *http.Request) string {
+// 	maxID := 0
+// 	for _, cookie := range r.Cookies() {
+// 		if strings.HasPrefix(cookie.Name, "test_") {
+// 			parts := strings.Split(cookie.Name, "_")
+// 			if len(parts) == 2 {
+// 				id, err := strconv.Atoi(parts[1])
+// 				if err == nil {
+// 					if id > maxID {
+// 						maxID = id
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
 
-	return strconv.Itoa(maxID + 1)
-}
+// 	return strconv.Itoa(maxID + 1)
+// }
 
 func testHandler(w http.ResponseWriter, r *http.Request) {
 	topic := r.URL.Query().Get("topic")
@@ -127,9 +126,8 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "GET" {
-		testID := getNextTestID(r)
 		http.SetCookie(w, &http.Cookie{
-			Name:   "test_" + testID,
+			Name:   "correctAnswerCounter",
 			Value:  "0",
 			Path:   "/",
 			MaxAge: 3600,
@@ -183,6 +181,37 @@ func resultHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func choiseHandler(w http.ResponseWriter, r *http.Request) {
+	connStr := "user=postgres password=aboba dbname=tests_db sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		fmt.Printf("DEBUG: DB connection error: %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	var topics []string
+
+	rows, err := db.Query(`SELECT name FROM topics`)
+	if err != nil {
+		http.Error(w, "Topics not found", http.StatusNotFound)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var topic string
+		rows.Scan(&topic)
+		topics = append(topics, topic)
+	}
+
+	tmpl := template.Must(template.ParseFiles("templates/choise.html"))
+	tmpl.Execute(w, map[string]interface{}{
+		"Topics": topics,
+	})
+}
+
 func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
@@ -194,9 +223,7 @@ func main() {
 		http.ServeFile(w, r, "templates/index.html")
 	})
 
-	http.HandleFunc("/choise", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "templates/choise.html")
-	})
+	http.HandleFunc("/choise", choiseHandler)
 
 	http.HandleFunc("/test", testHandler)
 

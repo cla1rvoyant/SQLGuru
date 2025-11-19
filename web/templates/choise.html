@@ -7,11 +7,13 @@
 </head>
 <body>
     <div class="exercises-block">
+        {{range $topic := .Topics}}
         <form class="exercise" method="GET" action="/test">
-            <h2>Синтаксис</h2>
-            <input type="hidden" name="topic" value="Синтаксис">
+            <h2>{{$topic}}</h2>
+            <input type="hidden" name="topic" value="{{$topic}}">
             <button type="submit" class="choise-button">Открыть</button>
         </form>
+        {{end}}
     </div>
 </body>
 </html>

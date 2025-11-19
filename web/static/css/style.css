@@ -177,14 +177,15 @@
 .exercises-block {
     height: 100vh;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
 }
 
 .exercise {
-    width: 230px;
     display: flex;
     justify-content: space-between;
+    width: 230px;
     padding: 10px;
 }
 
