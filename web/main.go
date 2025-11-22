@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strconv"
 
+	"golang.org/x/crypto/bcrypt"
+
 	_ "github.com/lib/pq"
 )
 
@@ -21,25 +23,6 @@ type Question struct {
 	WrongAnswer3    string
 	ShuffledAnswers []string
 }
-
-// func getNextTestID(r *http.Request) string {
-// 	maxID := 0
-// 	for _, cookie := range r.Cookies() {
-// 		if strings.HasPrefix(cookie.Name, "test_") {
-// 			parts := strings.Split(cookie.Name, "_")
-// 			if len(parts) == 2 {
-// 				id, err := strconv.Atoi(parts[1])
-// 				if err == nil {
-// 					if id > maxID {
-// 						maxID = id
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	return strconv.Itoa(maxID + 1)
-// }
 
 func testHandler(w http.ResponseWriter, r *http.Request) {
 	topic := r.URL.Query().Get("topic")
@@ -212,6 +195,35 @@ func choiseHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func admin_loginHandler(w http.ResponseWriter, r *http.Request) {
+	connStr := "user=postgres password=aboba dbname=tests_db sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		fmt.Printf("DEBUG: DB connection error: %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	if r.Method == "POST" {
+		adminLogin := r.FormValue("login")
+		adminPassword := r.FormValue("password")
+		var searchPassword string
+		err := db.QueryRow(`SELECT password FROM admins WHERE login = $1`, adminLogin).Scan(&searchPassword)
+		if err != nil {
+			fmt.Println("Admin not found")
+		}
+		err = bcrypt.CompareHashAndPassword([]byte(searchPassword), []byte(adminPassword))
+		if err == nil {
+			fmt.Println("Success")
+		} else {
+			fmt.Println("Wrong")
+		}
+	}
+
+	http.ServeFile(w, r, "templates/admin_login.html")
+}
+
 func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
@@ -228,6 +240,8 @@ func main() {
 	http.HandleFunc("/test", testHandler)
 
 	http.HandleFunc("/result", resultHandler)
+
+	http.HandleFunc("/admin_login", admin_loginHandler)
 
 	http.ListenAndServe("localhost:8080", nil)
 }

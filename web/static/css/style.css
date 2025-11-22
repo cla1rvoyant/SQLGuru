@@ -222,3 +222,15 @@
 .answer input {
     margin: 10px;
 }
+
+.admin-form {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.admin-form input {
+    margin: 5px;
+}
