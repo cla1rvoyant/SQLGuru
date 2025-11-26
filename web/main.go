@@ -8,11 +8,15 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
 	_ "github.com/lib/pq"
 )
+
+var JWTSecretString = []byte("ajsodnjasndojasd")
 
 type Question struct {
 	ID              uint
@@ -195,6 +199,18 @@ func choiseHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func generateJWT(adminLogin string) (string, error) {
+	claims := jwt.MapClaims{
+		"adm": adminLogin,
+		"exp": time.Now().Add(24 * time.Hour).Unix(),
+		"iat": time.Now().Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return token.SignedString(JWTSecretString)
+}
+
 func admin_loginHandler(w http.ResponseWriter, r *http.Request) {
 	connStr := "user=postgres password=aboba dbname=tests_db sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
@@ -208,20 +224,75 @@ func admin_loginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		adminLogin := r.FormValue("login")
 		adminPassword := r.FormValue("password")
+
 		var searchPassword string
 		err := db.QueryRow(`SELECT password FROM admins WHERE login = $1`, adminLogin).Scan(&searchPassword)
 		if err != nil {
 			fmt.Println("Admin not found")
+			tmpl := template.Must(template.ParseFiles("templates/admin_login.html"))
+			tmpl.Execute(w, map[string]interface{}{"Error": "Неверный логин или пароль"})
+			return
 		}
+
 		err = bcrypt.CompareHashAndPassword([]byte(searchPassword), []byte(adminPassword))
 		if err == nil {
 			fmt.Println("Success")
+			token, err := generateJWT(adminLogin)
+			if err != nil {
+				http.Error(w, "Ошибка создания токена", http.StatusInternalServerError)
+				return
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:   "adminJWT",
+				Value:  token,
+				Path:   "/admin",
+				MaxAge: 86400,
+			})
+			http.Redirect(w, r, "/admin", http.StatusSeeOther)
+			return
 		} else {
 			fmt.Println("Wrong")
+			tmpl := template.Must(template.ParseFiles("templates/admin_login.html"))
+			tmpl.Execute(w, map[string]interface{}{"Error": "Неверный логин или пароль"})
+			return
 		}
 	}
 
 	http.ServeFile(w, r, "templates/admin_login.html")
+}
+
+func JWTAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("adminJWT")
+		if err != nil {
+			http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
+			return
+		}
+
+		token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("неожиданный метод подписи: %v", token.Header["alg"])
+			}
+			return JWTSecretString, nil
+		})
+
+		if err != nil || !token.Valid {
+			http.Redirect(w, r, "/admin/login", http.StatusSeeOther)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
+func adminHandler(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("templates/admin.html")
+	if err != nil {
+		fmt.Println("Ошибка загрузки")
+	}
+	fmt.Println("Ura")
+	tmpl.Execute(w, nil)
 }
 
 func main() {
@@ -235,13 +306,15 @@ func main() {
 		http.ServeFile(w, r, "templates/index.html")
 	})
 
+	http.HandleFunc("/admin", JWTAuthMiddleware(adminHandler))
+
 	http.HandleFunc("/choise", choiseHandler)
 
 	http.HandleFunc("/test", testHandler)
 
 	http.HandleFunc("/result", resultHandler)
 
-	http.HandleFunc("/admin_login", admin_loginHandler)
+	http.HandleFunc("/admin/login", admin_loginHandler)
 
 	http.ListenAndServe("localhost:8080", nil)
 }
