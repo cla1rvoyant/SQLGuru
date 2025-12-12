@@ -26,7 +26,7 @@ type TableData struct {
 }
 
 // Для получения списка тем при создании вопроса
-type Theme struct {
+type Topic struct {
 	ID   int
 	Name string
 }
@@ -318,11 +318,50 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 			id := r.FormValue("id")
 			switch table {
 			case "admins":
+				tx, err := db.Begin()
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				defer tx.Rollback()
+
 				_, err = db.Exec("DELETE FROM admins WHERE id = $1", id)
+
+				_, err = tx.Exec("SELECT setval('admins_id_seq', COALESCE((SELECT MAX(id) FROM admins), 0) + 1, false)")
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 			case "topics":
+				tx, err := db.Begin()
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				defer tx.Rollback()
+
 				_, err = db.Exec("DELETE FROM topics WHERE id = $1", id)
+
+				_, err = tx.Exec("SELECT setval('topics_id_seq', COALESCE((SELECT MAX(id) FROM topics), 0) + 1, false)")
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 			case "questions":
+				tx, err := db.Begin()
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				defer tx.Rollback()
+
 				_, err = db.Exec("DELETE FROM questions WHERE id = $1", id)
+
+				_, err = tx.Exec("SELECT setval('questions_id_seq', COALESCE((SELECT MAX(id) FROM questions), 0) + 1, false)")
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 			}
 
 		case "create":
@@ -344,8 +383,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 				wrongAnswer1 := r.FormValue("wrong_answer1")
 				wrongAnswer2 := r.FormValue("wrong_answer2")
 				wrongAnswer3 := r.FormValue("wrong_answer3")
-				fmt.Printf("%T", topicID)
-				// Для необязательных полей используем NULL если пусто
+
 				var wrong2, wrong3 interface{}
 				if wrongAnswer2 == "" {
 					wrong2 = nil
@@ -363,7 +401,6 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 		case "switch":
-			// Просто переключаем таблицу
 		}
 
 		if err != nil {
@@ -383,22 +420,22 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 	tableData.Actions = true
 
 	// Для формы создания вопроса нужен список тем
-	var topics []Theme
+	var topics []Topic
 	if table == "questions" {
-		themeRows, err := db.Query("SELECT id, name FROM topics")
+		topicRows, err := db.Query("SELECT id, name FROM topics")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		defer themeRows.Close()
+		defer topicRows.Close()
 
-		for themeRows.Next() {
-			var theme Theme
-			if err := themeRows.Scan(&theme.ID, &theme.Name); err != nil {
+		for topicRows.Next() {
+			var topic Topic
+			if err := topicRows.Scan(&topic.ID, &topic.Name); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			topics = append(topics, theme)
+			topics = append(topics, topic)
 		}
 	}
 
@@ -406,7 +443,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 	switch table {
 	case "admins":
 		tableData.Headers = []string{"ID", "Логин"}
-		rows, err := db.Query("SELECT id, login FROM admins")
+		rows, err := db.Query("SELECT id, login FROM admins ORDER BY id")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -429,7 +466,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "topics":
 		tableData.Headers = []string{"ID", "Название"}
-		rows, err := db.Query("SELECT id, name FROM topics")
+		rows, err := db.Query("SELECT id, name FROM topics ORDER BY id")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -459,6 +496,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
                 COALESCE(q.wrong_answer3, '')
             FROM questions q 
             JOIN topics t ON q.topic_id = t.id
+			ORDER BY q.id
         `)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -468,14 +506,14 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 
 		for rows.Next() {
 			var id int
-			var themeName, questionText, correctAnswer, wrong1, wrong2, wrong3 string
-			if err := rows.Scan(&id, &themeName, &questionText, &correctAnswer, &wrong1, &wrong2, &wrong3); err != nil {
+			var topicName, questionText, correctAnswer, wrong1, wrong2, wrong3 string
+			if err := rows.Scan(&id, &topicName, &questionText, &correctAnswer, &wrong1, &wrong2, &wrong3); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			row := map[string]interface{}{
 				"ID":               id,
-				"Тема":             themeName,
+				"Тема":             topicName,
 				"Вопрос":           questionText,
 				"Правильный ответ": correctAnswer,
 				"Неправильный 1":   wrong1,
@@ -489,7 +527,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 	// Подготовка данных для шаблона
 	data := struct {
 		TableData
-		Topics []Theme
+		Topics []Topic
 	}{
 		TableData: tableData,
 		Topics:    topics,
