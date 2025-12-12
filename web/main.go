@@ -344,7 +344,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 				wrongAnswer1 := r.FormValue("wrong_answer1")
 				wrongAnswer2 := r.FormValue("wrong_answer2")
 				wrongAnswer3 := r.FormValue("wrong_answer3")
-
+				fmt.Printf("%T", topicID)
 				// Для необязательных полей используем NULL если пусто
 				var wrong2, wrong3 interface{}
 				if wrongAnswer2 == "" {
@@ -358,7 +358,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 					wrong3 = wrongAnswer3
 				}
 
-				_, err = db.Exec("INSERT INTO questions (topic_id, question_text, correct_answer, wrong_answer1, wrong_answer2, wrong_answer3) VALUES ($1, $2, $3, $4, $5, $6)",
+				_, err = db.Exec("INSERT INTO questions (id, topic_id, question_text, correct_answer, wrong_answer1, wrong_answer2, wrong_answer3) VALUES (DEFAULT, $1, $2, $3, $4, $5, $6)",
 					topicID, questionText, correctAnswer, wrongAnswer1, wrong2, wrong3)
 			}
 
