@@ -18,6 +18,19 @@ import (
 
 var JWTSecretString = []byte("ajsodnjasndojasd")
 
+type TableData struct {
+	TableName string
+	Headers   []string
+	Rows      []map[string]interface{}
+	Actions   bool
+}
+
+// Для получения списка тем при создании вопроса
+type Theme struct {
+	ID   int
+	Name string
+}
+
 type Question struct {
 	ID              uint
 	Text            string
@@ -287,12 +300,221 @@ func JWTAuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func adminHandler(w http.ResponseWriter, r *http.Request) {
+	connStr := "user=postgres password=aboba dbname=tests_db sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	// Обрабатываем POST запросы
+	if r.Method == "POST" {
+		action := r.FormValue("action")
+		table := r.FormValue("table")
+
+		switch action {
+		case "delete":
+			id := r.FormValue("id")
+			switch table {
+			case "admins":
+				_, err = db.Exec("DELETE FROM admins WHERE id = $1", id)
+			case "topics":
+				_, err = db.Exec("DELETE FROM topics WHERE id = $1", id)
+			case "questions":
+				_, err = db.Exec("DELETE FROM questions WHERE id = $1", id)
+			}
+
+		case "create":
+			switch table {
+			case "admins":
+				login := r.FormValue("login")
+				password := r.FormValue("password")
+				hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+				_, err = db.Exec("INSERT INTO admins (login, password) VALUES ($1, $2)", login, string(hashedPassword))
+
+			case "topics":
+				name := r.FormValue("name")
+				_, err = db.Exec("INSERT INTO topics (name) VALUES ($1)", name)
+
+			case "questions":
+				topicID := r.FormValue("topic_id")
+				questionText := r.FormValue("question_text")
+				correctAnswer := r.FormValue("correct_answer")
+				wrongAnswer1 := r.FormValue("wrong_answer1")
+				wrongAnswer2 := r.FormValue("wrong_answer2")
+				wrongAnswer3 := r.FormValue("wrong_answer3")
+
+				// Для необязательных полей используем NULL если пусто
+				var wrong2, wrong3 interface{}
+				if wrongAnswer2 == "" {
+					wrong2 = nil
+				} else {
+					wrong2 = wrongAnswer2
+				}
+				if wrongAnswer3 == "" {
+					wrong3 = nil
+				} else {
+					wrong3 = wrongAnswer3
+				}
+
+				_, err = db.Exec("INSERT INTO questions (topic_id, question_text, correct_answer, wrong_answer1, wrong_answer2, wrong_answer3) VALUES ($1, $2, $3, $4, $5, $6)",
+					topicID, questionText, correctAnswer, wrongAnswer1, wrong2, wrong3)
+			}
+
+		case "switch":
+			// Просто переключаем таблицу
+		}
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Определяем активную таблицу
+	table := r.FormValue("table")
+	if table == "" {
+		table = "admins"
+	}
+
+	var tableData TableData
+	tableData.TableName = table
+	tableData.Actions = true
+
+	// Для формы создания вопроса нужен список тем
+	var topics []Theme
+	if table == "questions" {
+		themeRows, err := db.Query("SELECT id, name FROM topics")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer themeRows.Close()
+
+		for themeRows.Next() {
+			var theme Theme
+			if err := themeRows.Scan(&theme.ID, &theme.Name); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			topics = append(topics, theme)
+		}
+	}
+
+	// Загружаем данные в универсальном формате
+	switch table {
+	case "admins":
+		tableData.Headers = []string{"ID", "Логин"}
+		rows, err := db.Query("SELECT id, login FROM admins")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var id int
+			var login string
+			if err := rows.Scan(&id, &login); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			row := map[string]interface{}{
+				"ID":    id,
+				"Логин": login,
+			}
+			tableData.Rows = append(tableData.Rows, row)
+		}
+
+	case "topics":
+		tableData.Headers = []string{"ID", "Название"}
+		rows, err := db.Query("SELECT id, name FROM topics")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var id int
+			var name string
+			if err := rows.Scan(&id, &name); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			row := map[string]interface{}{
+				"ID":       id,
+				"Название": name,
+			}
+			tableData.Rows = append(tableData.Rows, row)
+		}
+
+	case "questions":
+		tableData.Headers = []string{"ID", "Тема", "Вопрос", "Правильный ответ", "Неправильный 1", "Неправильный 2", "Неправильный 3"}
+		rows, err := db.Query(`
+            SELECT q.id, t.name, q.question_text, q.correct_answer, 
+                COALESCE(q.wrong_answer1, ''), 
+                COALESCE(q.wrong_answer2, ''), 
+                COALESCE(q.wrong_answer3, '')
+            FROM questions q 
+            JOIN topics t ON q.topic_id = t.id
+        `)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var id int
+			var themeName, questionText, correctAnswer, wrong1, wrong2, wrong3 string
+			if err := rows.Scan(&id, &themeName, &questionText, &correctAnswer, &wrong1, &wrong2, &wrong3); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			row := map[string]interface{}{
+				"ID":               id,
+				"Тема":             themeName,
+				"Вопрос":           questionText,
+				"Правильный ответ": correctAnswer,
+				"Неправильный 1":   wrong1,
+				"Неправильный 2":   wrong2,
+				"Неправильный 3":   wrong3,
+			}
+			tableData.Rows = append(tableData.Rows, row)
+		}
+	}
+
+	// Подготовка данных для шаблона
+	data := struct {
+		TableData
+		Topics []Theme
+	}{
+		TableData: tableData,
+		Topics:    topics,
+	}
+
+	// Отладочный вывод
+	fmt.Printf("DEBUG: TableName: %s\n", tableData.TableName)
+	fmt.Printf("DEBUG: Headers: %v\n", tableData.Headers)
+	fmt.Printf("DEBUG: Rows count: %d\n", len(tableData.Rows))
+	for i, row := range tableData.Rows {
+		fmt.Printf("DEBUG: Row %d: %v\n", i, row)
+	}
+
 	tmpl, err := template.ParseFiles("templates/admin.html")
 	if err != nil {
-		fmt.Println("Ошибка загрузки")
+		http.Error(w, "Ошибка загрузки шаблона: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
-	fmt.Println("Ura")
-	tmpl.Execute(w, nil)
+
+	// Выполнение шаблона с обработкой ошибок
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		http.Error(w, "Ошибка выполнения шаблона: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func main() {

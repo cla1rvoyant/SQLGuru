@@ -234,3 +234,14 @@
 .admin-form input {
     margin: 5px;
 }
+
+.admin-obj-transition {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.admin-obj-transition button {
+    margin: 5px;
+}
