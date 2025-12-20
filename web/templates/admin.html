@@ -2,43 +2,28 @@
 <html>
 <head>
     <title>Админ панель</title>
-    <style>
-        body {font-family: Arial, Helvetica, sans-serif;}
-        .admin-menu { display: flex; gap: 20px; margin: 20px; }
-        .admin-menu button { padding: 15px 30px; font-size: 16px; cursor: pointer; }
-        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .create-btn { padding: 10px ; background-color: #4CAF50; color: white; border: none; cursor: pointer; margin: 10px 0; }
-        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); overflow-y: auto;}
-        .modal-content { background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; }
-        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-        .form-group { margin: 10px 0; }
-        .form-group label { display: block; margin-bottom: 5px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; box-sizing: border-box; }
-        .delete-btn { background-color: #f44336; color: white; border: none; padding: 5px 10px; cursor: pointer; }
-    </style>
+    <link rel="stylesheet" href="../static/css/style.css">
 </head>
 <body>    
-    <!-- Навигация -->
+    <!-- Навигация по таблицам -->
     <div class="admin-menu">
         <a href="/admin?table=admins"><button type="button">Администраторы</button></a>
         <a href="/admin?table=topics"><button type="button">Темы</button></a>
         <a href="/admin?table=questions"><button type="button">Вопросы</button></a>
     </div>
 
-    <!-- Единая форма для всех действий -->
+    <!-- Действия -->
     <form id="adminForm" method="POST" style="display: none;">
         <input type="hidden" id="actionType" name="action" value="">
         <input type="hidden" id="tableType" name="table" value="{{.TableName}}">
         <input type="hidden" id="recordId" name="id" value="">
     </form>
 
-    <!-- Кнопка создания -->
-    <button type="button" class="create-btn" onclick="openCreateModal()">Создать запись</button>
+    <!-- Кнопка создания записи -->
+    <button type="button" class="create-btn" onclick="openCreateModal('{{.TableName}}')">Создать запись</button>
 
-    <!-- Универсальная таблица -->
-    <h2>{{.TableName}}</h2>
+    <!-- Шаблон для всех таблиц -->
+    <h2 class="table-name">{{.TableName}}</h2>
     {{if gt (len .Rows) 0}}
     <table>
         <thead>
@@ -72,7 +57,8 @@
                 {{end}}
                 {{if $.Actions}}
                 <td>
-                    <button type="button" class="delete-btn" data-table="{{$.TableName}}" data-id="{{$id}}">Удалить</button>
+                    <button type="button" class="edit-btn" onclick="openEditModal('{{$.TableName}}', '{{$id}}')">Редактировать</button>
+                    <button type="button" class="delete-btn" onclick="deleteRecord('{{$.TableName}}', '{{$id}}')">Удалить</button>
                 </td>
                 {{end}}
             </tr>
@@ -83,143 +69,27 @@
     <p>Нет данных для отображения</p>
     {{end}}
 
-    <!-- Модальное окно для создания -->
+    <!-- Модальное окно для создания/редактирования -->
     <div id="createModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeCreateModal()">&times;</span>
-            <h2>Создать запись</h2>
-            <form id="createForm" onsubmit="submitCreateForm(event)">
-                <input type="hidden" name="table" value="{{.TableName}}">
+            <h2 id="modalTitle"></h2>
+            <form id="createForm">
+                <input type="hidden" id="formAction" name="action" value="create">
+                <input type="hidden" id="formTable" name="table" value="{{.TableName}}">
+                <input type="hidden" id="formId" name="id" value="">
                 
                 <div id="formFields">
                     <!-- Поля формы будут подставляться JavaScript -->
                 </div>
                 
-                <button type="submit">Создать</button>
+                <button type="button" onclick="submitForm()" id="submitButton">Создать</button>
             </form>
         </div>
     </div>
 
-    <script>
-        // Функции для работы с модальным окном
-        function openCreateModal() {
-            document.getElementById('createModal').style.display = 'block';
-            updateFormFields();
-        }
-
-        function closeCreateModal() {
-            document.getElementById('createModal').style.display = 'none';
-        }
-
-        // Обновление полей формы
-        function updateFormFields() {
-            const activeTable = '{{.TableName}}';
-            const formFields = document.getElementById('formFields');
-            let fieldsHTML = '';
-
-            switch(activeTable) {
-                case 'admins':
-                    fieldsHTML = `
-                        <div class="form-group">
-                            <label>Логин:</label>
-                            <input type="text" name="login" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Пароль:</label>
-                            <input type="password" name="password" required>
-                        </div>
-                    `;
-                    break;
-                case 'topics':
-                    fieldsHTML = `
-                        <div class="form-group">
-                            <label>Название темы:</label>
-                            <input type="text" name="name" required>
-                        </div>
-                    `;
-                    break;
-                case 'questions':
-                    fieldsHTML = `
-                        <div class="form-group">
-                            <label>Тема:</label>
-                            <select name="topic_id" required>
-                                <option value="">Выберите тему</option>
-                                {{range .Topics}}
-                                <option value="{{.ID}}">{{.Name}}</option>
-                                {{end}}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Текст вопроса:</label>
-                            <textarea name="question_text" required></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>Правильный ответ:</label>
-                            <input type="text" name="correct_answer" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Неправильный ответ 1:</label>
-                            <input type="text" name="wrong_answer1" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Неправильный ответ 2 (необязательно):</label>
-                            <input type="text" name="wrong_answer2">
-                        </div>
-                        <div class="form-group">
-                            <label>Неправильный ответ 3 (необязательно):</label>
-                            <input type="text" name="wrong_answer3">
-                        </div>
-                    `;
-                    break;
-            }
-
-            formFields.innerHTML = fieldsHTML;
-        }
-
-        // Удаление записи
-        function deleteRecord(table, id) {
-            if (confirm('Удалить запись?')) {
-                document.getElementById('tableType').value = table;
-                document.getElementById('actionType').value = 'delete';
-                document.getElementById('recordId').value = id;
-                document.getElementById('adminForm').submit();
-            }
-        }
-
-        // Отправка формы создания
-        function submitCreateForm(event) {
-            event.preventDefault();
-            const formData = new FormData(event.target);
-            
-            // Добавляем данные в основную форму
-            document.getElementById('actionType').value = 'create';
-            for (let [key, value] of formData.entries()) {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = key;
-                input.value = value;
-                document.getElementById('adminForm').appendChild(input);
-            }
-            
-            document.getElementById('adminForm').submit();
-        }
-
-        // Обработчик кнопок удаления
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('delete-btn')) {
-                const table = e.target.getAttribute('data-table');
-                const id = e.target.getAttribute('data-id');
-                deleteRecord(table, id);
-            }
-        });
-
-        // Закрытие модального окна при клике вне его
-        window.onclick = function(event) {
-            const modal = document.getElementById('createModal');
-            if (event.target == modal) {
-                closeCreateModal();
-            }
-        }
+    <script src="static/js/admin.js">
+        
     </script>
 </body>
 </html>

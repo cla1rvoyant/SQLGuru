@@ -2,12 +2,117 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+// Обработчик для получения данных записи
+func adminGetHandler(w http.ResponseWriter, r *http.Request) {
+	connStr := "user=postgres password=aboba dbname=tests_db sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	table := r.URL.Query().Get("table")
+	id := r.URL.Query().Get("id")
+
+	var data map[string]interface{}
+
+	switch table {
+	case "admins":
+		var login string
+		err := db.QueryRow("SELECT login FROM admins WHERE id = $1", id).Scan(&login)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data = map[string]interface{}{
+			"login": login,
+		}
+
+	case "topics":
+		var name string
+		err := db.QueryRow("SELECT name FROM topics WHERE id = $1", id).Scan(&name)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		data = map[string]interface{}{
+			"name": name,
+		}
+
+	case "questions":
+		var topicID int
+		var questionText, correctAnswer, wrong1, wrong2, wrong3 string
+
+		err := db.QueryRow(`
+            SELECT topic_id, question_text, correct_answer, 
+                   COALESCE(wrong_answer1, ''), 
+                   COALESCE(wrong_answer2, ''), 
+                   COALESCE(wrong_answer3, '')
+            FROM questions WHERE id = $1
+        `, id).Scan(&topicID, &questionText, &correctAnswer, &wrong1, &wrong2, &wrong3)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data = map[string]interface{}{
+			"topic_id":       topicID,
+			"question_text":  questionText,
+			"correct_answer": correctAnswer,
+			"wrong_answer1":  wrong1,
+			"wrong_answer2":  wrong2,
+			"wrong_answer3":  wrong3,
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
+
+// Обработчик для получения списка тем
+func adminTopicsHandler(w http.ResponseWriter, r *http.Request) {
+	connStr := "user=postgres password=aboba dbname=tests_db sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	rows, err := db.Query("SELECT id, name FROM topics ORDER BY name")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var topics []map[string]interface{}
+	for rows.Next() {
+		var id int
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		topics = append(topics, map[string]interface{}{
+			"id":   id,
+			"name": name,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(topics)
+}
 
 func admin_loginHandler(w http.ResponseWriter, r *http.Request) {
 	connStr := "user=postgres password=aboba dbname=tests_db sslmode=disable"
@@ -78,6 +183,19 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 			id := r.FormValue("id")
 			switch table {
 			case "admins":
+				var adminLogin string
+				err := db.QueryRow("SELECT login FROM admins WHERE id = $1", id).Scan(&adminLogin)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				// Проверка на главного администратора
+				if adminLogin == "main" {
+					http.Error(w, "Невозможно удалить главного администратора", http.StatusForbidden)
+					return
+				}
+
 				tx, err := db.Begin()
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -159,7 +277,59 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 				_, err = db.Exec("INSERT INTO questions (id, topic_id, question_text, correct_answer, wrong_answer1, wrong_answer2, wrong_answer3) VALUES (DEFAULT, $1, $2, $3, $4, $5, $6)",
 					topicID, questionText, correctAnswer, wrongAnswer1, wrong2, wrong3)
 			}
-		case "switch":
+		case "update":
+			switch table {
+			case "admins":
+				id := r.FormValue("id")
+				login := r.FormValue("login")
+				password := r.FormValue("password")
+
+				if password != "" {
+					hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+					_, err = db.Exec("UPDATE admins SET login = $1, password = $2 WHERE id = $3",
+						login, string(hashedPassword), id)
+				} else {
+					_, err = db.Exec("UPDATE admins SET login = $1 WHERE id = $2", login, id)
+				}
+
+			case "topics":
+				id := r.FormValue("id")
+				name := r.FormValue("name")
+				_, err = db.Exec("UPDATE topics SET name = $1 WHERE id = $2", name, id)
+
+			case "questions":
+				id := r.FormValue("id")
+				topicID := r.FormValue("topic_id")
+				questionText := r.FormValue("question_text")
+				correctAnswer := r.FormValue("correct_answer")
+				wrongAnswer1 := r.FormValue("wrong_answer1")
+				wrongAnswer2 := r.FormValue("wrong_answer2")
+				wrongAnswer3 := r.FormValue("wrong_answer3")
+
+				var wrong2, wrong3 interface{}
+				if wrongAnswer2 == "" {
+					wrong2 = nil
+				} else {
+					wrong2 = wrongAnswer2
+				}
+				if wrongAnswer3 == "" {
+					wrong3 = nil
+				} else {
+					wrong3 = wrongAnswer3
+				}
+
+				_, err = db.Exec(`
+                    UPDATE questions 
+                    SET topic_id = $1, question_text = $2, correct_answer = $3, 
+                        wrong_answer1 = $4, wrong_answer2 = $5, wrong_answer3 = $6
+                    WHERE id = $7
+                `, topicID, questionText, correctAnswer, wrongAnswer1, wrong2, wrong3, id)
+			}
+
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		if err != nil {
@@ -168,7 +338,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Определяем активную таблицу
+	// Определение активную таблицу
 	table := r.FormValue("table")
 	if table == "" {
 		table = "admins"
@@ -178,7 +348,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 	tableData.TableName = table
 	tableData.Actions = true
 
-	// Для формы создания вопроса нужен список тем
+	// Список тем для формы создания или редактирования вопроса
 	var topics []Topic
 	if table == "questions" {
 		topicRows, err := db.Query("SELECT id, name FROM topics")
@@ -198,7 +368,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Загружаем данные в универсальном формате
+	// Загрузка данных
 	switch table {
 	case "admins":
 		tableData.Headers = []string{"ID", "Логин"}
@@ -298,7 +468,6 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Выполнение шаблона с обработкой ошибок
 	err = tmpl.Execute(w, data)
 	if err != nil {
 		http.Error(w, "Ошибка выполнения шаблона: "+err.Error(), http.StatusInternalServerError)

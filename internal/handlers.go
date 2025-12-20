@@ -60,29 +60,52 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 		})
 
 		var nextQuestion Question
-		err = db.QueryRow(`
-		SELECT id, question_text, correct_answer, wrong_answer1, wrong_answer2, wrong_answer3
-		FROM questions
-		WHERE topic_id = (SELECT topic_id FROM questions WHERE id = $1)
-		AND id > $1
-		ORDER BY id LIMIT 1
-		`, questionID).Scan(&nextQuestion.ID, &nextQuestion.Text, &nextQuestion.CorrectAnswer, &nextQuestion.WrongAnswer1, &nextQuestion.WrongAnswer2, &nextQuestion.WrongAnswer3)
+		if selectedAnswer != "" {
+			err = db.QueryRow(`
+			SELECT id, question_text, correct_answer, wrong_answer1, wrong_answer2, wrong_answer3
+			FROM questions
+			WHERE topic_id = (SELECT topic_id FROM questions WHERE id = $1)
+			AND id > $1
+			ORDER BY id LIMIT 1
+			`, questionID).Scan(&nextQuestion.ID, &nextQuestion.Text, &nextQuestion.CorrectAnswer, &nextQuestion.WrongAnswer1, &nextQuestion.WrongAnswer2, &nextQuestion.WrongAnswer3)
 
-		if err == sql.ErrNoRows {
-			http.Redirect(w, r, "/result?topic="+url.QueryEscape(topic), http.StatusSeeOther)
-			return
+			if err == sql.ErrNoRows {
+				http.Redirect(w, r, "/result?topic="+url.QueryEscape(topic), http.StatusSeeOther)
+				return
+			}
+
+			fmt.Println(nextQuestion.Text)
+
+			answers := []string{nextQuestion.CorrectAnswer, nextQuestion.WrongAnswer1, nextQuestion.WrongAnswer2, nextQuestion.WrongAnswer3}
+			if answers[2] == "" {
+				answers = answers[:len(answers)-2]
+			} else if answers[3] == "" {
+				answers = answers[:len(answers)-1]
+			}
+			rand.Shuffle(len(answers), func(i, j int) { answers[i], answers[j] = answers[j], answers[i] })
+			nextQuestion.ShuffledAnswers = answers
+		} else {
+			err = db.QueryRow(`
+                SELECT id, question_text, correct_answer, wrong_answer1, wrong_answer2, wrong_answer3
+                FROM questions
+                WHERE id = $1
+            `, questionID).Scan(&nextQuestion.ID, &nextQuestion.Text,
+				&nextQuestion.CorrectAnswer, &nextQuestion.WrongAnswer1,
+				&nextQuestion.WrongAnswer2, &nextQuestion.WrongAnswer3)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			answers := []string{nextQuestion.CorrectAnswer, nextQuestion.WrongAnswer1, nextQuestion.WrongAnswer2, nextQuestion.WrongAnswer3}
+			if answers[2] == "" {
+				answers = answers[:len(answers)-2]
+			} else if answers[3] == "" {
+				answers = answers[:len(answers)-1]
+			}
+			rand.Shuffle(len(answers), func(i, j int) { answers[i], answers[j] = answers[j], answers[i] })
+			nextQuestion.ShuffledAnswers = answers
 		}
-
-		fmt.Println(nextQuestion.Text)
-
-		answers := []string{nextQuestion.CorrectAnswer, nextQuestion.WrongAnswer1, nextQuestion.WrongAnswer2, nextQuestion.WrongAnswer3}
-		if answers[2] == "" {
-			answers = answers[:len(answers)-2]
-		} else if answers[3] == "" {
-			answers = answers[:len(answers)-1]
-		}
-		rand.Shuffle(len(answers), func(i, j int) { answers[i], answers[j] = answers[j], answers[i] })
-		nextQuestion.ShuffledAnswers = answers
 
 		tmpl := template.Must(template.ParseFiles("../web/templates/exercise.html"))
 		tmpl.Execute(w, map[string]interface{}{

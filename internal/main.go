@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("../web/static"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
@@ -18,6 +18,10 @@ func main() {
 	})
 
 	http.HandleFunc("/admin", JWTAuthMiddleware(adminHandler))
+
+	http.HandleFunc("/admin/get", JWTAuthMiddleware(adminGetHandler))
+
+	http.HandleFunc("/admin/topics", JWTAuthMiddleware(adminTopicsHandler))
 
 	http.HandleFunc("/choise", choiseHandler)
 
