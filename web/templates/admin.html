@@ -12,7 +12,7 @@
         <a href="/admin?table=questions"><button type="button">Вопросы</button></a>
     </div>
 
-    <!-- Действия -->
+    <!-- Форма с данными для изменения таблиц -->
     <form id="adminForm" method="POST" style="display: none;">
         <input type="hidden" id="actionType" name="action" value="">
         <input type="hidden" id="tableType" name="table" value="{{.TableName}}">
@@ -31,9 +31,7 @@
                 {{range .Headers}}
                 <th>{{.}}</th>
                 {{end}}
-                {{if .Actions}}
                 <th>Действия</th>
-                {{end}}
             </tr>
         </thead>
         <tbody>
@@ -55,12 +53,10 @@
                     <td>{{index . "Неправильный 2"}}</td>
                     <td>{{index . "Неправильный 3"}}</td>
                 {{end}}
-                {{if $.Actions}}
                 <td>
                     <button type="button" class="edit-btn" onclick="openEditModal('{{$.TableName}}', '{{$id}}')">Редактировать</button>
                     <button type="button" class="delete-btn" onclick="deleteRecord('{{$.TableName}}', '{{$id}}')">Удалить</button>
                 </td>
-                {{end}}
             </tr>
             {{end}}
         </tbody>
@@ -80,7 +76,7 @@
                 <input type="hidden" id="formId" name="id" value="">
                 
                 <div id="formFields">
-                    <!-- Поля формы будут подставляться JavaScript -->
+                    <!-- Поля формы подставляются JS -->
                 </div>
                 
                 <button type="button" onclick="submitForm()" id="submitButton">Создать</button>

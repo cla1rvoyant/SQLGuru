@@ -54,8 +54,8 @@ func adminGetHandler(w http.ResponseWriter, r *http.Request) {
 
 		err := db.QueryRow(`
             SELECT topic_id, question_text, correct_answer, 
-                   COALESCE(wrong_answer1, ''), 
-                   COALESCE(wrong_answer2, ''), 
+                   wrong_answer1, 
+                   COALESCE(wrong_answer2, ''),
                    COALESCE(wrong_answer3, '')
             FROM questions WHERE id = $1
         `, id).Scan(&topicID, &questionText, &correctAnswer, &wrong1, &wrong2, &wrong3)
@@ -173,7 +173,7 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	// Обрабатываем POST запросы
+	// Обработка POST запросов
 	if r.Method == "POST" {
 		action := r.FormValue("action")
 		table := r.FormValue("table")
@@ -346,7 +346,6 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 
 	var tableData TableData
 	tableData.TableName = table
-	tableData.Actions = true
 
 	// Список тем для формы создания или редактирования вопроса
 	var topics []Topic

@@ -108,7 +108,7 @@ function fillFormFields(table, data) {
     
     document.getElementById('formFields').innerHTML = html;
     
-    // Для вопросов нужно заполнить список тем
+    // Заполнение списка тем для вопросов
     if (table === 'questions') {
         fillTopicsSelect(data.topic_id);
     }
@@ -119,13 +119,13 @@ async function fillTopicsSelect(selectedTopicId = '') {
     const select = document.querySelector('select[name="topic_id"]');
     if (!select) return;
     
-    // Загружаем список тем
+    // Загрузка списка тем
     const response = await fetch('/admin/topics');
     if (!response.ok) return;
     
     const topics = await response.json();
     
-    // Очищаем и заполняем select
+    // Очищение и заполнение select
     select.innerHTML = '<option value="">Выберите тему</option>';
     
     topics.forEach(topic => {
@@ -200,7 +200,7 @@ function updateFormFields(table) {
     
     document.getElementById('formFields').innerHTML = html;
     
-    // Для вопросов нужно загрузить список тем
+    // Загрузка списка тем для вопросов
     if (table === 'questions') {
         fillTopicsSelect();
     }
@@ -226,12 +226,12 @@ function submitForm() {
     const form = document.getElementById('createForm');
     const formData = new FormData(form);
     
-    // Добавляем данные в основную форму
+    // Добавление данных в основную форму
     document.getElementById('actionType').value = formData.get('action');
     document.getElementById('tableType').value = formData.get('table');
     document.getElementById('recordId').value = formData.get('id') || '';
     
-    // Копируем все поля из формы
+    // Копирирование всех полей из формы
     for (let i = 0; i < form.elements.length; i++) {
         const element = form.elements[i];
         if (element.name && element.name !== 'action' && element.name !== 'table' && element.name !== 'id') {
@@ -243,7 +243,7 @@ function submitForm() {
         }
     }
     
-    // Отправляем основную форму
+    // Отправка основной формы
     document.getElementById('adminForm').submit();
 }
 

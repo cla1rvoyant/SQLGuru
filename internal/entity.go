@@ -4,7 +4,6 @@ type TableData struct {
 	TableName string
 	Headers   []string
 	Rows      []map[string]interface{}
-	Actions   bool
 }
 
 type Topic struct {
