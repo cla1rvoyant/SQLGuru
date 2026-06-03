@@ -202,6 +202,9 @@
 }
 
 .ans-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     margin: 10px;
 }
 
@@ -221,6 +224,16 @@
 
 .answer input {
     margin: 10px;
+}
+
+.ans-btn {
+    border: 0;
+    width: 150px;
+    height: 30px;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 10px;
+    margin-top: 20px;
 }
 
 .admin-form {
