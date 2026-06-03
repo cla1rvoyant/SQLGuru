@@ -14,7 +14,7 @@
             {{range $index, $answer := .Question.ShuffledAnswers}}
             <div class="answer">
                 <label for="ans{{$index}}">
-                    <input type="radio" name="answer" id="ans{{$index}}" value="{{$answer}}">
+                    <input type="radio" name="answer" id="ans{{$index}}" value="{{$answer}}" required>
                     {{$answer}}
                 </label>
             </div>
