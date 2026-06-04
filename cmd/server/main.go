@@ -37,7 +37,7 @@ func main() {
 	articleRepo := repository.NewArticleRepository(db)
 
 	quizSvc := service.NewQuizService(questionRepo, topicRepo)
-	adminSvc := service.NewAdminService(adminRepo, topicRepo, questionRepo)
+	adminSvc := service.NewAdminService(adminRepo, topicRepo, questionRepo, articleRepo)
 	articleSvc := service.NewArticleService(articleRepo)
 
 	quizH := handler.NewQuizHandler(quizSvc, cfg.TemplatesDir)

@@ -42,3 +42,24 @@ func (r *postgresArticleRepository) GetAll() ([]domain.Article, error) {
 	}
 	return articles, nil
 }
+
+func (r *postgresArticleRepository) Create(topicName, title, content string) error {
+	_, err := r.db.Exec(
+		`INSERT INTO articles (topic_name, title, content) VALUES ($1, $2, $3)`,
+		topicName, title, content,
+	)
+	return err
+}
+
+func (r *postgresArticleRepository) Update(id, topicName, title, content string) error {
+	_, err := r.db.Exec(
+		`UPDATE articles SET topic_name = $1, title = $2, content = $3 WHERE id = $4`,
+		topicName, title, content, id,
+	)
+	return err
+}
+
+func (r *postgresArticleRepository) Delete(id string) error {
+	_, err := r.db.Exec(`DELETE FROM articles WHERE id = $1`, id)
+	return err
+}

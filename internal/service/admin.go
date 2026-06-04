@@ -15,10 +15,11 @@ type AdminService struct {
 	admins    repository.AdminRepository
 	topics    repository.TopicRepository
 	questions repository.QuestionRepository
+	articles  repository.ArticleRepository
 }
 
-func NewAdminService(a repository.AdminRepository, t repository.TopicRepository, q repository.QuestionRepository) *AdminService {
-	return &AdminService{admins: a, topics: t, questions: q}
+func NewAdminService(a repository.AdminRepository, t repository.TopicRepository, q repository.QuestionRepository, art repository.ArticleRepository) *AdminService {
+	return &AdminService{admins: a, topics: t, questions: q, articles: art}
 }
 
 func (s *AdminService) Authenticate(login, password string) error {
@@ -65,6 +66,20 @@ func (s *AdminService) GetTableData(table string) (*domain.TableData, []domain.T
 			return nil, nil, err
 		}
 		td.Rows = rows
+
+	case "articles":
+		td.Headers = []string{"ID", "Тема", "Заголовок"}
+		all, err := s.articles.GetAll()
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, a := range all {
+			td.Rows = append(td.Rows, map[string]interface{}{
+				"ID":        a.ID,
+				"Тема":      a.TopicName,
+				"Заголовок": a.Title,
+			})
+		}
 	}
 
 	var topics []domain.Topic
@@ -108,6 +123,17 @@ func (s *AdminService) GetRecord(table, id string) (map[string]interface{}, erro
 			"wrong_answer2":  q.WrongAnswer2,
 			"wrong_answer3":  q.WrongAnswer3,
 		}, nil
+
+	case "articles":
+		a, err := s.articles.GetByID(id)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{
+			"topic_name": a.TopicName,
+			"title":      a.Title,
+			"content":    a.Content,
+		}, nil
 	}
 	return nil, nil
 }
@@ -127,6 +153,8 @@ func (s *AdminService) DeleteRecord(table, id string) error {
 		return s.topics.Delete(id)
 	case "questions":
 		return s.questions.Delete(id)
+	case "articles":
+		return s.articles.Delete(id)
 	}
 	return nil
 }
@@ -149,6 +177,9 @@ func (s *AdminService) CreateRecord(table string, fields map[string]string) erro
 			fields["topic_id"], fields["question_text"],
 			fields["correct_answer"], fields["wrong_answer1"], w2, w3,
 		)
+
+	case "articles":
+		return s.articles.Create(fields["topic_name"], fields["title"], fields["content"])
 	}
 	return nil
 }
@@ -176,6 +207,9 @@ func (s *AdminService) UpdateRecord(table, id string, fields map[string]string) 
 			id, fields["topic_id"], fields["question_text"],
 			fields["correct_answer"], fields["wrong_answer1"], w2, w3,
 		)
+
+	case "articles":
+		return s.articles.Update(id, fields["topic_name"], fields["title"], fields["content"])
 	}
 	return nil
 }

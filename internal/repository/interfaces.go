@@ -25,6 +25,9 @@ type TopicRepository interface {
 type ArticleRepository interface {
 	GetByID(id string) (*domain.Article, error)
 	GetAll() ([]domain.Article, error)
+	Create(topicName, title, content string) error
+	Update(id, topicName, title, content string) error
+	Delete(id string) error
 }
 
 type AdminRepository interface {

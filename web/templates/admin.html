@@ -5,24 +5,21 @@
     <link rel="stylesheet" href="../static/css/style.css">
 </head>
 <body>    
-    <!-- Навигация по таблицам -->
     <div class="admin-menu">
         <a href="/admin?table=admins"><button type="button">Администраторы</button></a>
         <a href="/admin?table=topics"><button type="button">Темы</button></a>
         <a href="/admin?table=questions"><button type="button">Вопросы</button></a>
+        <a href="/admin?table=articles"><button type="button">Статьи</button></a>
     </div>
 
-    <!-- Форма с данными для изменения таблиц -->
     <form id="adminForm" method="POST" style="display: none;">
         <input type="hidden" id="actionType" name="action" value="">
         <input type="hidden" id="tableType" name="table" value="{{.TableName}}">
         <input type="hidden" id="recordId" name="id" value="">
     </form>
 
-    <!-- Кнопка создания записи -->
     <button type="button" class="create-btn" onclick="openCreateModal('{{.TableName}}')">Создать запись</button>
 
-    <!-- Шаблон для всех таблиц -->
     <h2 class="table-name">{{.TableName}}</h2>
     {{if gt (len .Rows) 0}}
     <table>
@@ -52,6 +49,10 @@
                     <td>{{index . "Неправильный 1"}}</td>
                     <td>{{index . "Неправильный 2"}}</td>
                     <td>{{index . "Неправильный 3"}}</td>
+                {{else if eq $.TableName "articles"}}
+                    <td>{{$id}}</td>
+                    <td>{{index . "Тема"}}</td>
+                    <td>{{index . "Заголовок"}}</td>
                 {{end}}
                 <td>
                     <button type="button" class="edit-btn" onclick="openEditModal('{{$.TableName}}', '{{$id}}')">Редактировать</button>
@@ -65,7 +66,6 @@
     <p>Нет данных для отображения</p>
     {{end}}
 
-    <!-- Модальное окно для создания/редактирования -->
     <div id="createModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeCreateModal()">&times;</span>
@@ -74,18 +74,12 @@
                 <input type="hidden" id="formAction" name="action" value="create">
                 <input type="hidden" id="formTable" name="table" value="{{.TableName}}">
                 <input type="hidden" id="formId" name="id" value="">
-                
-                <div id="formFields">
-                    <!-- Поля формы подставляются JS -->
-                </div>
-                
+                <div id="formFields"></div>
                 <button type="button" onclick="submitForm()" id="submitButton">Создать</button>
             </form>
         </div>
     </div>
 
-    <script src="static/js/admin.js">
-        
-    </script>
+    <script src="static/js/admin.js"></script>
 </body>
 </html>
