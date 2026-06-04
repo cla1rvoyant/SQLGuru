@@ -42,6 +42,8 @@ func (s *QuizService) GetQuestion(questionID string) (*domain.Question, error) {
 	return q, nil
 }
 
+// CheckAndNext checks the selected answer and returns the next question.
+// Returns (correct, nil, ErrNoMoreQuestions) when the quiz is finished.
 func (s *QuizService) CheckAndNext(questionID, selectedAnswer string) (bool, *domain.Question, error) {
 	correctAnswer, err := s.questions.GetCorrectAnswer(questionID)
 	if err != nil {

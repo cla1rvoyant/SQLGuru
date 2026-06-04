@@ -21,3 +21,10 @@ type Question struct {
 	WrongAnswer3    string
 	ShuffledAnswers []string
 }
+
+type Article struct {
+	ID        int
+	TopicName string
+	Title     string
+	Content   string
+}

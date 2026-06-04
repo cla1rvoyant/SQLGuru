@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/joho/godotenv"
-
 	_ "github.com/lib/pq"
 
 	"sqlguru/internal/config"
@@ -35,12 +34,15 @@ func main() {
 	questionRepo := repository.NewQuestionRepository(db)
 	topicRepo := repository.NewTopicRepository(db)
 	adminRepo := repository.NewAdminRepository(db)
+	articleRepo := repository.NewArticleRepository(db)
 
 	quizSvc := service.NewQuizService(questionRepo, topicRepo)
 	adminSvc := service.NewAdminService(adminRepo, topicRepo, questionRepo)
+	articleSvc := service.NewArticleService(articleRepo)
 
 	quizH := handler.NewQuizHandler(quizSvc, cfg.TemplatesDir)
 	adminH := handler.NewAdminHandler(adminSvc, cfg.TemplatesDir, cfg.JWTSecret, cfg.JWTTokenTTL)
+	articleH := handler.NewArticleHandler(articleSvc, cfg.TemplatesDir)
 
 	authMw := middleware.NewJWTMiddleware(cfg.JWTSecret)
 
@@ -58,6 +60,7 @@ func main() {
 	http.HandleFunc("/admin/get", authMw(adminH.GetRecord))
 	http.HandleFunc("/admin/topics", authMw(adminH.GetTopics))
 	http.HandleFunc("/admin/login", adminH.Login)
+	http.HandleFunc("/article", articleH.Show)
 	http.HandleFunc("/choise", quizH.Choice)
 	http.HandleFunc("/test", quizH.Test)
 	http.HandleFunc("/result", quizH.Result)

@@ -22,6 +22,11 @@ type TopicRepository interface {
 	Delete(id string) error
 }
 
+type ArticleRepository interface {
+	GetByID(id string) (*domain.Article, error)
+	GetAll() ([]domain.Article, error)
+}
+
 type AdminRepository interface {
 	GetPasswordByLogin(login string) (string, error)
 	GetLoginByID(id string) (string, error)

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Article.Title}} — SQLGuru</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="article-nav">
+        {{range .Articles}}
+        <a href="/article?id={{.ID}}" class="article-nav-link">{{.Title}}</a>
+        {{end}}
+    </div>
+
+    <div class="article-container">
+        <h1 class="article-title">{{.Article.Title}}</h1>
+        <div class="article-content">
+            {{.Content}}
+        </div>
+        <div class="article-footer">
+            <a href="/test?topic={{.Article.TopicName}}" class="btn-test">Перейти к тесту</a>
+        </div>
+    </div>
+</body>
+</html>
