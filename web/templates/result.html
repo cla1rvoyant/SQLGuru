@@ -6,26 +6,21 @@
     <link rel="stylesheet" href="../static/css/style.css">
 </head>
 <body>
-    <style>
-        body {
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-        h1 {
-            text-align: center;
-        }
-        .result-block {
-            margin-top: 10px;
-        }
-    </style>
-    <h1>Тест завершён!</h1>
-    <div class="result-block">
-        <p>Тема: {{.Topic}}</p>
-        <p>Количество правильных ответов: {{.correctAnswerCounter}}</p>
+    <div id="main-nav-bar">
+        <div class="logo"><h1>SQLGuru</h1></div>
     </div>
-    <a href="/choise">К тестам</a>
+
+    <div class="result-container">
+        <div class="result-card">
+            <h1 class="result-title">Тест завершён!</h1>
+            <div class="result-info">
+                <p class="result-topic">Тема: <b>{{.Topic}}</b></p>
+                <p class="result-score">Правильных ответов: <b>{{.correctAnswerCounter}}</b></p>
+            </div>
+            <div class="result-footer">
+                <a href="/article?id=1" class="btn-home">К статьям</a>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
