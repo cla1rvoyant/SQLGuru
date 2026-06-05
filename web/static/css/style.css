@@ -17,25 +17,9 @@
     display: flex;
     justify-content: center;
     border-radius: 20px;
-    background-color: #ee4510;
+    background-color: #c72c41;
     font-size: 14px;
     margin-left: 20px;
-}
-
-#login-button {
-    width: 130px;
-    height: 35px;
-    border-radius: 20px;
-    background-color: #c72c41;
-    font-size: 18px;
-    cursor: pointer;
-    transition: 0.2s ease;
-    border: 0;
-    margin-right: 20px;
-}
-
-#login-button:hover {
-    background-color: #c72c41b7;
 }
 
 #banner {
@@ -44,7 +28,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background-color: #801335;
+    background-color: #fff;
 }
 
 #banner h1 {
@@ -57,7 +41,8 @@
     width: 130px;
     height: 45px;
     border-radius: 25px;
-    background-color: #ee4510;
+    background-color: #2d132c;
+    color: #fff;
     border: 0;
     font-size: 22px;
     cursor: pointer;
@@ -66,7 +51,7 @@
 }
 
 #beginButton:hover {
-    background-color: #ee4510b7;
+    background-color: #c72c41;
 }
 
 #loginModal {
